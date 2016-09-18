@@ -64,7 +64,7 @@ class Poller(threading.Thread):
                 # It's an advert
                 self.album = None
                 self.artist = None
-                self.track = {'name': "Advert"}
+                self.track = {'name': "Advert", 'uri': ""}
                 self.albumart = None
             else:
                 # It's not an advert
