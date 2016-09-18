@@ -58,9 +58,10 @@ class SpotifyDriver():
             return False
         el = self.spotify.find_element_by_id("player-button-shuffle")
         if el is not None:
-            return "active" in el.get_attribute("class")
-        else:
-            return False
+            cl = el.get_attribute("class")
+            if cl is not None:
+                return "active" in cl
+        return False
 
     def star(self):
         self.click("nowplaying-add-icon")
@@ -70,9 +71,10 @@ class SpotifyDriver():
             return False
         el = self.spotify.find_element_by_id("nowplaying-add-icon")
         if el is not None:
-            return "added" in el.get_attribute("class")
-        else:
-            return False
+            cl = el.get_attribute("class")
+            if cl is not None:
+                return "added" in cl
+        return False
 
     def shuffle(self, shuffle_enable=None):
         if self.spotify is None:
@@ -109,11 +111,9 @@ class SpotifyDriver():
         el = self.spotify.find_element_by_id("player-button-repeat")
         if el is not None:
             cl = el.get_attribute("class")
-            if "spoticon-repeatonce" in cl:
-                return REPEAT_ONCE
-            elif "active" in cl:
-                return REPEAT
-            else:
-                return REPEAT_OFF
-        else:
-            return REPEAT_OFF
+            if cl is not None:
+                if "spoticon-repeatonce" in cl:
+                    return REPEAT_ONCE
+                elif "active" in cl:
+                    return REPEAT
+        return REPEAT_OFF
