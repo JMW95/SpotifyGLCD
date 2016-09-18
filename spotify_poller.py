@@ -42,17 +42,25 @@ class Poller(threading.Thread):
                 time.sleep(2)
                 continue
 
-            self.state = PLAYING if j['playing'] else PAUSED
+            try:
+                meta = j['track']
+                tracktype = meta['track_type']
 
-            meta = j['track']
+                if 'track_resource' in meta: newtrack = meta['track_resource']
+                if 'album_resource' in meta: newalbum = meta['album_resource']
+                if 'artist_resource' in meta: newartist = meta['artist_resource']
 
-            self.tracklen = meta['length']
-            self.offset = time.time() - j['playing_position']
+                self.state = PLAYING if j['playing'] else PAUSED
 
-            if self.state == PAUSED:
-                self.pausedat = j['playing_position']
+                self.tracklen = meta['length']
+                self.offset = time.time() - j['playing_position']
 
-            if meta['track_type'] not in ["normal", "explicit"]:
+                if self.state == PAUSED:
+                    self.pausedat = j['playing_position']
+            except KeyError: # Something was missing from the poll data
+                continue
+
+            if tracktype not in ["normal", "explicit"]:
                 # It's an advert
                 self.album = None
                 self.artist = None
@@ -60,8 +68,6 @@ class Poller(threading.Thread):
                 self.albumart = None
             else:
                 # It's not an advert
-                newtrack = meta['track_resource']
-                newalbum = meta['album_resource']
 
                 fetch_art = False
                 if self.album is None or newalbum['uri'] != self.album['uri']: # fetch new album art
@@ -87,7 +93,7 @@ class Poller(threading.Thread):
                                 retries += 1
                                 continue
 
-                    self.artist = meta['artist_resource']
+                    self.artist = newartist
 
                     threading.Thread(target=get_artist).start()
 

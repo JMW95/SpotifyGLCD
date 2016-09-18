@@ -2,6 +2,7 @@ import sys
 import time
 import threading
 import atexit
+from selenium.common.exceptions import WebDriverException
 from PIL import Image, ImageFont, ImageDraw
 from spotify_api import SpotifyLocal, SpotifyWeb
 from spotify_driver import *
@@ -162,11 +163,11 @@ def render_color():
                 pendingcommands[:] = [] # Clear the list
                 commandlock.release()
 
-    # GLCD needs BGRA, so swap it like this
-    swapped = Image.frombytes("RGBX", (320,240), image.tobytes(), 'raw', 'BGR')
+        # GLCD needs BGRA, so swap it like this
+        swapped = Image.frombytes("RGBX", (320,240), image.tobytes(), 'raw', 'BGR')
 
-    # This call takes almost the whole time of this function
-    GLCD.ColorBGPIL(swapped)
+        # This call takes almost the whole time of this function
+        GLCD.ColorBGPIL(swapped)
 
 def buttoncallback(btn):
     if isinstance(buttons, GLCD.ColorButtonManager):
@@ -222,9 +223,6 @@ if __name__ == '__main__':
 
     spotify_web = SpotifyWeb()
 
-    driver.close_spotify()
-    driver.open_spotify()
-
     #if not SpotifyWeb.authed:
     #    print "Waiting for auth..."
     #    while not SpotifyWeb.authed:
@@ -232,24 +230,41 @@ if __name__ == '__main__':
 
     #TODO: show list of playlists and select to play from them
 
+    giveup = False
+
     def connect_to_spotify():
-        global spotify_local
+        global spotify_local, giveup
         spotify_local = SpotifyLocal()
         poller.spotify_local = spotify_local
         while not spotify_local.connected:
             try:
                 spotify_local.connect()
+                # If Spotify.exe is not running, give up
+                if not driver.is_spotify_running():
+                    print "NOT RUNNING"
+                    giveup = True
+                    break
+                print "RUNNING"
             except:
                 pass
             time.sleep(1)
 
+    def close():
+        if poller is not None: poller.running = False
+        if buttonthread is not None: buttonthread.running = False
+        if spotify_web is not None: spotify_web.shutdown()
+        driver.quit()
+
     try:
+        driver.close_spotify()
+        driver.open_spotify()
+
         poller = Poller(spotify_local, spotify_web)
         poller.start()
-        
+
         threading.Thread(target=connect_to_spotify).start()
-        
-        while True:
+
+        while True and not giveup:
             if lcd_type == GLCD.TYPE_COLOR:
                 time.sleep(0.05)
                 render_color()
@@ -258,12 +273,10 @@ if __name__ == '__main__':
                 render_mono()
 
             GLCD.LogiLcdUpdate()
-    except KeyboardInterrupt:
-        poller.running = False
-        buttonthread.running = False
-        spotify_web.shutdown()
+
+        close()
+    except (KeyboardInterrupt, WebDriverException):
+        close()
     except Exception:
-        poller.running = False
-        buttonthread.running = False
-        spotify_web.shutdown()
+        close()
         raise

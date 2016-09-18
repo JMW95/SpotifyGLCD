@@ -1,5 +1,6 @@
 import os
 import time
+import subprocess
 from selenium import webdriver
 
 REPEAT_OFF = 0
@@ -34,6 +35,19 @@ class SpotifyDriver():
         else:
             os.system("taskkill /f /im Spotify.exe")
 
+    def is_spotify_running(self):
+        p = subprocess.Popen(["tasklist", "/fi", "imagename eq Spotify.exe"], shell=True, stdout=subprocess.PIPE)
+        out = p.communicate()[0].strip().split('\r\n')
+        # if TASKLIST returns single line without processname: it's not running
+        if len(out) > 1 and "Spotify.exe" in out[-1]:
+            return True
+        else:
+            return False
+
+    def quit(self):
+        if self.spotify is not None:
+            self.spotify.quit()
+
     def click(self, id):
         if self.spotify is None:
             return
@@ -42,7 +56,11 @@ class SpotifyDriver():
     def is_shuffle_enabled(self):
         if self.spotify is None:
             return False
-        return "active" in self.spotify.find_element_by_id("player-button-shuffle").get_attribute("class")
+        el = self.spotify.find_element_by_id("player-button-shuffle")
+        if el is not None:
+            return "active" in el.get_attribute("class")
+        else:
+            return False
 
     def star(self):
         self.click("nowplaying-add-icon")
@@ -50,7 +68,11 @@ class SpotifyDriver():
     def is_starred(self):
         if self.spotify is None:
             return False
-        return "added" in self.spotify.find_element_by_id("nowplaying-add-icon").get_attribute("class")
+        el = self.spotify.find_element_by_id("nowplaying-add-icon")
+        if el is not None:
+            return "added" in el.get_attribute("class")
+        else:
+            return False
 
     def shuffle(self, shuffle_enable=None):
         if self.spotify is None:
@@ -84,10 +106,14 @@ class SpotifyDriver():
         self.click("player-button-play")
 
     def get_repeat_mode(self):
-        cl = self.spotify.find_element_by_id("player-button-repeat").get_attribute("class")
-        if "spoticon-repeatonce" in cl:
-            return REPEAT_ONCE
-        elif "active" in cl:
-            return REPEAT
+        el = self.spotify.find_element_by_id("player-button-repeat")
+        if el is not None:
+            cl = el.get_attribute("class")
+            if "spoticon-repeatonce" in cl:
+                return REPEAT_ONCE
+            elif "active" in cl:
+                return REPEAT
+            else:
+                return REPEAT_OFF
         else:
             return REPEAT_OFF
