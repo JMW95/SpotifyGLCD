@@ -48,10 +48,13 @@ class SpotifyDriver():
         if self.spotify is not None:
             self.spotify.quit()
 
-    def click(self, id):
+    def click(self, id=None, class_name=None):
         if self.spotify is None:
             return
-        self.spotify.execute_script("document.getElementById('" + id + "').click()")
+        if class_name:
+            self.spotify.execute_script("document.getElementsByClassName('" + class_name + "')[0].click()")
+        else:
+            self.spotify.execute_script("document.getElementById('" + id + "').click()")
 
     def is_shuffle_enabled(self):
         if self.spotify is None:
@@ -64,12 +67,12 @@ class SpotifyDriver():
         return False
 
     def star(self):
-        self.click("nowplaying-add-icon")
+        self.click(class_name="nowplaying-add-button")
 
     def is_starred(self):
         if self.spotify is None:
             return False
-        el = self.spotify.find_element_by_id("nowplaying-add-icon")
+        el = self.spotify.find_elements_by_class_name("nowplaying-add-button")[0]
         if el is not None:
             cl = el.get_attribute("class")
             if cl is not None:
